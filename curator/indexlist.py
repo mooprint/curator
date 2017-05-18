@@ -156,6 +156,13 @@ class IndexList(object):
                 for index in list(working_list.keys()):
                     s = self.index_info[index]
                     wl = working_list[index]
+
+                    if 'settings' not in wl:
+                        # We can try to get the same info from index/_settings.
+                        # To work around https://github.com/elastic/curator/issues/880
+                        alt_wl = self.client.indices.get(index, feature='_settings')[index]
+                        wl['settings'] = alt_wl['settings']
+
                     if not 'creation_date' in wl['settings']['index']:
                         self.loggit.warn(
                             'Index: {0} has no "creation_date"! This implies '
@@ -800,7 +807,7 @@ class IndexList(object):
 
     def filter_period(
         self, source='name', range_from=None, range_to=None, timestring=None,
-        unit=None, field=None, stats_result='min_value', 
+        unit=None, field=None, stats_result='min_value',
         week_starts_on='sunday', epoch=None, exclude=False,
         ):
         """
@@ -812,7 +819,7 @@ class IndexList(object):
         :arg range_to: How many ``unit``s in the past/future is the end point?
         :arg timestring: An strftime string to match the datestamp in an index
             name. Only used for index filtering by ``name``.
-        :arg unit: One of ``hours``, ``days``, ``weeks``, ``months``, or 
+        :arg unit: One of ``hours``, ``days``, ``weeks``, ``months``, or
             ``years``.
         :arg unit_count: The number of ``unit``s. ``unit_count`` * ``unit`` will
             be calculated out to the relative number of seconds.
@@ -821,9 +828,9 @@ class IndexList(object):
         :arg stats_result: Either `min_value` or `max_value`.  Only used in
             conjunction with `source`=``field_stats`` to choose whether to
             reference the minimum or maximum result value.
-        :arg week_starts_on: Either ``sunday`` or ``monday``. Default is 
+        :arg week_starts_on: Either ``sunday`` or ``monday``. Default is
             ``sunday``
-        :arg epoch: An epoch timestamp used to establish a point of reference 
+        :arg epoch: An epoch timestamp used to establish a point of reference
             for calculations. If not provided, the current time will be used.
         :arg exclude: If `exclude` is `True`, this filter will remove matching
             indices from `indices`. If `exclude` is `False`, then only matching
